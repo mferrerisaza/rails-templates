@@ -105,11 +105,10 @@ after_bundle do
   rails_command 'db:migrate'
   generate('devise:views')
 
-
   # install tailwind
   ########################################
   rails_command 'tailwindcss:install'
-
+  gsub_file('app/javascript/stylesheets/tailwind.config.js', 'purge: [],', 'purge: ["./app/**/*.html.erb", "./app/helpers/**/*.rb", "./app/javascript/**/*.js"]')
 
   # install turbo
   ########################################
@@ -136,20 +135,17 @@ after_bundle do
   ########################################
   rails_command 'webpacker:install:stimulus'
 
-  run 'rm app/controllers/pages_controller.rb'
-  # file 'app/javascript/packs/application.js', <<~JS
-  #   import Rails from "@rails/ujs"
-  #   import { Turbo, cable } from "@hotwired/turbo-rails"
-  #   import * as ActiveStorage from "@rails/activestorage"
-  #   import "controllers"
+  run 'rm app/javascript/packs/application.js'
+  file 'app/javascript/packs/application.js', <<~JS
+    import Rails from "@rails/ujs"
+    import "@hotwired/turbo-rails"
+    import * as ActiveStorage from "@rails/activestorage"
+    import "stylesheets/application"
+    import "controllers"
 
-  #   Rails.start()
-  #   Turbolinks.start()
-  #   ActiveStorage.start()
-
-  # JS
-
-  # gsub_file('app/javascript/packs/application.js', 'import Turbolinks from "turbolinks"', 'import { Turbo, cable } from "@hotwired/turbo-rails"')
+    Rails.start()
+    ActiveStorage.start()
+  JS
 
   inject_into_file 'config/webpack/environment.js', before: 'module.exports' do
     <<~JS
