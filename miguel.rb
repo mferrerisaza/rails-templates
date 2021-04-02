@@ -7,6 +7,7 @@ inject_into_file 'Gemfile', before: 'group :development, :test do' do
     gem 'devise'
     gem 'autoprefixer-rails'
     gem 'font-awesome-sass'
+    gem 'tailwindcss-rails'
     gem 'turbo-rails'
   RUBY
 end
@@ -20,7 +21,6 @@ inject_into_file 'Gemfile', after: 'group :development, :test do' do
 end
 
 gsub_file('Gemfile', /# gem 'redis'/, "gem 'redis'")
-gsub_file('Gemfile', "gem 'webpacker', '~> 5.0'","gem 'webpacker', '~> 6.0.0.beta.6'")
 
 # Assets
 ########################################
@@ -116,6 +116,10 @@ after_bundle do
   rails_command 'db:migrate'
   generate('devise:views')
 
+  # install tailwind
+  ########################################
+  rails_command 'tailwindcss:install'
+  gsub_file('app/javascript/stylesheets/tailwind.config.js', 'purge: [],', 'purge: ["./app/**/*.html.erb", "./app/helpers/**/*.rb", "./app/javascript/**/*.js"],')
   # install turbo
   ########################################
   rails_command 'turbo:install'
@@ -139,8 +143,6 @@ after_bundle do
 
   # Webpacker / Yarn
   ########################################
-
-  # gsub_file('app/javascript/stylesheets/tailwind.config.js', 'purge: [],', 'purge: ["./app/**/*.html.erb", "./app/helpers/**/*.rb", "./app/javascript/**/*.js"],')
   rails_command 'webpacker:install:stimulus'
 
   run 'rm app/javascript/packs/application.js'
