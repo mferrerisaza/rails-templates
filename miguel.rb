@@ -108,12 +108,12 @@ after_bundle do
 
   # install tailwind
   ########################################
-  generate('tailwindcss:install')
+  rails_command 'tailwindcss:install'
 
 
   # install turbo
   ########################################
-  generate('turbo:install')
+  rails_command 'turbo:install'
 
   # Pages Controller
   ########################################
@@ -135,6 +135,29 @@ after_bundle do
   # Webpacker / Yarn
   ########################################
   rails_command 'webpacker:install:stimulus'
+
+  run 'rm app/controllers/pages_controller.rb'
+  # file 'app/javascript/packs/application.js', <<~JS
+  #   import Rails from "@rails/ujs"
+  #   import { Turbo, cable } from "@hotwired/turbo-rails"
+  #   import * as ActiveStorage from "@rails/activestorage"
+  #   import "controllers"
+
+  #   Rails.start()
+  #   Turbolinks.start()
+  #   ActiveStorage.start()
+
+  # JS
+
+  # gsub_file('app/javascript/packs/application.js', 'import Turbolinks from "turbolinks"', 'import { Turbo, cable } from "@hotwired/turbo-rails"')
+
+  inject_into_file 'config/webpack/environment.js', before: 'module.exports' do
+    <<~JS
+      const webpack = require('webpack');
+      // Preventing Babel from transpiling NodeModules packages
+      environment.loaders.delete('nodeModules');
+    JS
+  end
 
   # Dotenv
   ########################################
