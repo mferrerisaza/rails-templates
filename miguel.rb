@@ -7,7 +7,6 @@ inject_into_file 'Gemfile', before: 'group :development, :test do' do
     gem 'devise'
     gem 'autoprefixer-rails'
     gem 'font-awesome-sass'
-    gem 'tailwindcss-rails'
     gem 'turbo-rails'
   RUBY
 end
@@ -28,6 +27,17 @@ run 'rm -rf app/assets/stylesheets'
 run 'rm -rf vendor'
 run 'curl -L https://github.com/lewagon/stylesheets/archive/master.zip > stylesheets.zip'
 run 'unzip stylesheets.zip -d app/assets && rm stylesheets.zip && mv app/assets/rails-stylesheets-master app/assets/stylesheets'
+run 'rm -rf app/assets/stylesheets/config'
+run 'rm  app/assets/stylesheets/application.scss'
+file 'app/assets/stylesheets/application.scss', <<~CSS
+  // External libraries
+  @import "font-awesome-sprockets";
+  @import "font-awesome";
+
+  // Your CSS partials
+  @import "components/index";
+  @import "pages/index";
+CSS
 
 # Dev environment
 ########################################
@@ -105,11 +115,6 @@ after_bundle do
   rails_command 'db:migrate'
   generate('devise:views')
 
-  # install tailwind
-  ########################################
-  rails_command 'tailwindcss:install'
-  gsub_file('app/javascript/stylesheets/tailwind.config.js', 'purge: [],', 'purge: ["./app/**/*.html.erb", "./app/helpers/**/*.rb", "./app/javascript/**/*.js"]')
-
   # install turbo
   ########################################
   rails_command 'turbo:install'
@@ -133,6 +138,8 @@ after_bundle do
 
   # Webpacker / Yarn
   ########################################
+
+  # gsub_file('app/javascript/stylesheets/tailwind.config.js', 'purge: [],', 'purge: ["./app/**/*.html.erb", "./app/helpers/**/*.rb", "./app/javascript/**/*.js"],')
   rails_command 'webpacker:install:stimulus'
 
   run 'rm app/javascript/packs/application.js'
