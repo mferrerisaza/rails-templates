@@ -147,6 +147,8 @@ after_bundle do
     ActiveStorage.start()
   JS
 
+  run 'rm -rf app/javascript/channels'
+
   inject_into_file 'config/webpack/environment.js', before: 'module.exports' do
     <<~JS
       const webpack = require('webpack');
