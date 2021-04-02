@@ -20,6 +20,7 @@ inject_into_file 'Gemfile', after: 'group :development, :test do' do
 end
 
 gsub_file('Gemfile', /# gem 'redis'/, "gem 'redis'")
+gsub_file('Gemfile', "gem 'webpacker', '~> 5.0'","gem 'webpacker', '~> 6.0.0.beta.6'")
 
 # Assets
 ########################################
