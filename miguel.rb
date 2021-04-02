@@ -120,6 +120,7 @@ after_bundle do
   ########################################
   rails_command 'tailwindcss:install'
   gsub_file('app/javascript/stylesheets/tailwind.config.js', 'purge: [],', 'purge: ["./app/**/*.html.erb", "./app/helpers/**/*.rb", "./app/javascript/**/*.js"],')
+
   # install turbo
   ########################################
   rails_command 'turbo:install'
