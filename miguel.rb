@@ -7,14 +7,16 @@ inject_into_file 'Gemfile', before: 'group :development, :test do' do
     gem 'devise'
     gem 'autoprefixer-rails'
     gem 'font-awesome-sass'
+    gem 'tailwindcss-rails'
+    gem 'turbo-rails'
   RUBY
 end
 
 inject_into_file 'Gemfile', after: 'group :development, :test do' do
   <<-RUBY
-  gem 'pry-byebug'
-  gem 'pry-rails'
-  gem 'dotenv-rails'
+    gem 'pry-rails'
+    gem 'pry-byebug'
+    gem 'dotenv-rails'
   RUBY
 end
 
@@ -103,6 +105,16 @@ after_bundle do
   rails_command 'db:migrate'
   generate('devise:views')
 
+
+  # install tailwind
+  ########################################
+  generate('tailwindcss:install')
+
+
+  # install turbo
+  ########################################
+  generate('turbo:install')
+
   # Pages Controller
   ########################################
   run 'rm app/controllers/pages_controller.rb'
@@ -122,6 +134,7 @@ after_bundle do
 
   # Webpacker / Yarn
   ########################################
+  rails_command 'webpacker:install:stimulus'
 
   # Dotenv
   ########################################
