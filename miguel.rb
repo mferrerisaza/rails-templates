@@ -48,19 +48,19 @@ gsub_file('config/environments/development.rb', /config\.assets\.debug.*/, 'conf
 ########################################
 if Rails.version < "6"
   scripts = <<~HTML
-    <%= javascript_include_tag 'application', 'data-turbolinks-track': 'reload', defer: true %>
-        <%= javascript_pack_tag 'application', 'data-turbolinks-track': 'reload' %>
+    <%= javascript_include_tag 'application', 'data-turbo-track': 'reload', defer: true %>
+        <%= javascript_pack_tag 'application', 'data-turbo-track': 'reload' %>
   HTML
-  gsub_file('app/views/layouts/application.html.erb', "<%= javascript_include_tag 'application', 'data-turbolinks-track': 'reload' %>", scripts)
+  gsub_file('app/views/layouts/application.html.erb', "<%= javascript_include_tag 'application', 'data-turbo-track': 'reload' %>", scripts)
 end
 
-gsub_file('app/views/layouts/application.html.erb', "<%= javascript_pack_tag 'application', 'data-turbolinks-track': 'reload' %>", "<%= javascript_pack_tag 'application', 'data-turbolinks-track': 'reload', defer: true %>")
+gsub_file('app/views/layouts/application.html.erb', "<%= javascript_pack_tag 'application', 'data-turbo-track': 'reload' %>", "<%= javascript_pack_tag 'application', 'data-turbo-track': 'reload', defer: true %>")
 
 style = <<~HTML
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-      <%= stylesheet_link_tag 'application', media: 'all', 'data-turbolinks-track': 'reload' %>
+      <%= stylesheet_link_tag 'application', media: 'all', 'data-turbo-track': 'reload' %>
 HTML
-gsub_file('app/views/layouts/application.html.erb', "<%= stylesheet_link_tag 'application', media: 'all', 'data-turbolinks-track': 'reload' %>", style)
+gsub_file('app/views/layouts/application.html.erb', "<%= stylesheet_link_tag 'application', media: 'all', 'data-turbo-track': 'reload' %>", style)
 
 # Generators
 ########################################
@@ -178,9 +178,10 @@ after_bundle do
 
   # Git
   ########################################
-  git add: '.'
-  git commit: "-m 'Initial commit with template from https://github.com/mferrerisaza/rails-templates'"
 
   # Fix puma config
   gsub_file('config/puma.rb', 'pidfile ENV.fetch("PIDFILE") { "tmp/pids/server.pid" }', '# pidfile ENV.fetch("PIDFILE") { "tmp/pids/server.pid" }')
+
+  git add: '.'
+  git commit: "-m 'Initial commit with template from https://github.com/mferrerisaza/rails-templates'"
 end
