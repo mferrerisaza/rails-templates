@@ -65,6 +65,12 @@ file 'app/views/shared/_flashes.html.erb', <<~HTML
   <% end %>
 HTML
 
+inject_into_file 'app/views/layouts/application.html.erb', after: '<body>' do
+  <<-HTML
+    <%= render 'shared/flashes' %>
+  HTML
+end
+
 # Generators
 ########################################
 generators = <<~RUBY
