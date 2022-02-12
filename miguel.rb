@@ -5,62 +5,90 @@ run "if uname | grep -q 'Darwin'; then pgrep spring | xargs kill -9; fi"
 inject_into_file 'Gemfile', before: 'group :development, :test do' do
   <<~RUBY
     gem 'devise'
-    gem 'autoprefixer-rails'
-    gem 'font-awesome-sass'
-    gem 'tailwindcss-rails'
-    gem 'turbo-rails'
+    gem 'simple_form'
   RUBY
 end
 
 inject_into_file 'Gemfile', after: 'group :development, :test do' do
   <<-RUBY
-    gem 'pry-rails'
-    gem 'pry-byebug'
     gem 'dotenv-rails'
   RUBY
 end
 
-gsub_file('Gemfile', /# gem 'redis'/, "gem 'redis'")
 
-# Assets
-########################################
-run 'rm -rf app/assets/stylesheets'
-run 'rm -rf vendor'
-run 'curl -L https://github.com/lewagon/stylesheets/archive/master.zip > stylesheets.zip'
-run 'unzip stylesheets.zip -d app/assets && rm stylesheets.zip && mv app/assets/rails-stylesheets-master app/assets/stylesheets'
-run 'rm -rf app/assets/stylesheets/config'
-run 'rm  app/assets/stylesheets/application.scss'
-file 'app/assets/stylesheets/application.scss', <<~CSS
-  // External libraries
-  @import "font-awesome-sprockets";
-  @import "font-awesome";
-
-  // Your CSS partials
-  @import "components/index";
-  @import "pages/index";
-CSS
+inject_into_file 'Gemfile', after: 'group :development do' do
+  <<-RUBY
+    gem 'hotwire-livereload'
+  RUBY
+end
 
 # Dev environment
 ########################################
 gsub_file('config/environments/development.rb', /config\.assets\.debug.*/, 'config.assets.debug = false')
 
-# Layout
-########################################
-if Rails.version < "6"
-  scripts = <<~HTML
-    <%= javascript_include_tag 'application', 'data-turbo-track': 'reload', defer: true %>
-        <%= javascript_pack_tag 'application', 'data-turbo-track': 'reload' %>
-  HTML
-  gsub_file('app/views/layouts/application.html.erb', "<%= javascript_include_tag 'application', 'data-turbolinks-track': 'reload' %>", scripts)
-end
+# Add flashes
+file 'app/views/shared/_flashes.html.erb', <<~HTML
+  <% if notice %>
+    <div class="w-fit transition duration-150 bg-green-100 rounded-lg p-4 text-sm text-green-800 absolute bottom-4 left-4 mr-8 flex justify-between"
+         data-controller="alert"
+         data-alert-wait-time-value="2000">
+      <p class="font-medium flex">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+        </svg>
+        <span class="pl-3"><%= notice %></span>
+      </p>
+      <button class="pl-16 text-sm font-bold flex justify-end items-center" data-action="click->alert#dismiss">
+        <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+  <% end %>
 
-gsub_file('app/views/layouts/application.html.erb', "<%= javascript_pack_tag 'application', 'data-turbolinks-track': 'reload' %>", "<%= javascript_pack_tag 'application', 'data-turbo-track': 'reload', defer: true %>")
-
-style = <<~HTML
-  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-      <%= stylesheet_link_tag 'application', media: 'all', 'data-turbo-track': 'reload' %>
+  <% if alert %>
+    <div class="w-fit transition duration-150 bg-red-100 rounded-lg p-4 text-sm text-red-800 absolute bottom-4 left-4 mr-8 flex justify-between"
+         data-controller="alert"
+         data-alert-wait-time-value="2000">
+      <p class="font-medium flex">
+        <svg xmlns="http://www.w3.org/2000/svg"  class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+        </svg>
+        <span class="pl-3"><%= alert %></span>
+      </p>
+      <button class="pl-16 text-sm font-bold flex justify-end items-center" data-action="click->alert#dismiss">
+        <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+  <% end %>
 HTML
-gsub_file('app/views/layouts/application.html.erb', "<%= stylesheet_link_tag 'application', media: 'all', 'data-turbolinks-track': 'reload' %>", style)
+
+# Make flashes dismissable and autocleanable
+file 'app/javascript/controllers/alert_controller.js', <<~JS
+  import { Controller } from "@hotwired/stimulus"
+
+  export default class extends Controller {
+    static values = { waitTime: { type: Number, default: 1000 } }
+
+    connect() {
+      this.timeouts = [window.setTimeout(() => this.dismiss(), this.waitTimeValue)]
+    }
+
+    disconnect() {
+      this.timeouts.forEach((timeout) => window.clearTimeout(timeout))
+    }
+
+    dismiss() {
+      this.element.classList.add("-translate-x-full")
+      this.timeouts.push(window.setTimeout(() => this.element.remove(), 140))
+    }
+  }
+JS
+
+
+rails_command 'stimulus:manifest:update'
 
 # Generators
 ########################################
@@ -69,8 +97,10 @@ generators = <<~RUBY
     generate.assets false
     generate.helper false
     generate.test_framework :test_unit, fixture: false
+    generate.orm :active_record, primary_key_type: :uuid
   end
 RUBY
+
 
 environment generators
 
@@ -81,6 +111,12 @@ after_bundle do
   # Generators: db + simple form + pages controller
   ########################################
   rails_command 'db:drop db:create db:migrate'
+  # Simple form with tailwind installation
+  ########################################
+  generate('simple_form:install')
+  run 'yarn add @tailwindcss/forms'
+  run 'rm -rf tailwind.config.js'
+  run 'curl -L https://github.com/mferrerisaza/rails-templates/archive/master.zip > stylesheets.zip'
   generate(:controller, 'pages', 'home', '--skip-routes', '--no-test-framework')
 
   # Routes
@@ -107,7 +143,7 @@ after_bundle do
   run 'rm app/controllers/application_controller.rb'
   file 'app/controllers/application_controller.rb', <<~RUBY
     class ApplicationController < ActionController::Base
-    #{  "protect_from_forgery with: :exception\n" if Rails.version < "5.2"}  before_action :authenticate_user!
+      before_action :authenticate_user!
     end
   RUBY
 
@@ -116,21 +152,12 @@ after_bundle do
   rails_command 'db:migrate'
   generate('devise:views')
 
-  # install tailwind
-  ########################################
-  rails_command 'tailwindcss:install'
-  gsub_file('app/javascript/stylesheets/tailwind.config.js', 'purge: [],', 'purge: ["./app/**/*.html.erb", "./app/helpers/**/*.rb", "./app/javascript/**/*.js"],')
-
-  # install turbo
-  ########################################
-  rails_command 'turbo:install'
-
   # Pages Controller
   ########################################
   run 'rm app/controllers/pages_controller.rb'
   file 'app/controllers/pages_controller.rb', <<~RUBY
     class PagesController < ApplicationController
-      skip_before_action :authenticate_user!, only: [ :home ]
+      skip_before_action :authenticate_user!, only: :home
 
       def home
       end
@@ -142,32 +169,6 @@ after_bundle do
   environment 'config.action_mailer.default_url_options = { host: "http://localhost:3000" }', env: 'development'
   environment 'config.action_mailer.default_url_options = { host: "http://TODO_PUT_YOUR_DOMAIN_HERE" }', env: 'production'
 
-  # Webpacker / Yarn
-  ########################################
-  rails_command 'webpacker:install:stimulus'
-
-  run 'rm app/javascript/packs/application.js'
-  file 'app/javascript/packs/application.js', <<~JS
-    import Rails from "@rails/ujs"
-    import "@hotwired/turbo-rails"
-    import * as ActiveStorage from "@rails/activestorage"
-    import "stylesheets/application"
-    import "controllers"
-
-    Rails.start()
-    ActiveStorage.start()
-  JS
-
-  run 'rm -rf app/javascript/channels'
-
-  inject_into_file 'config/webpack/environment.js', before: 'module.exports' do
-    <<~JS
-      const webpack = require('webpack');
-      // Preventing Babel from transpiling NodeModules packages
-      environment.loaders.delete('nodeModules');
-    JS
-  end
-
   # Dotenv
   ########################################
   run 'touch .env'
@@ -175,9 +176,6 @@ after_bundle do
   # Rubocop
   ########################################
   run 'curl -L https://raw.githubusercontent.com/lewagon/rails-templates/master/.rubocop.yml > .rubocop.yml'
-
-  # Git
-  ########################################
 
   # Fix puma config
   gsub_file('config/puma.rb', 'pidfile ENV.fetch("PIDFILE") { "tmp/pids/server.pid" }', '# pidfile ENV.fetch("PIDFILE") { "tmp/pids/server.pid" }')
