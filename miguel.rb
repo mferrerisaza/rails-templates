@@ -92,9 +92,11 @@ after_bundle do
   generate('simple_form:install')
   run 'yarn add @tailwindcss/forms'
   run 'rm -rf tailwind.config.js'
+  run 'rm -rf app/assets/stylesheets/application.tailwind.css'
   run 'curl -L https://raw.githubusercontent.com/mferrerisaza/rails-templates/master/simple_form_tailwind_config/tailwind.config.js > tailwind.config.js'
   run 'curl -L https://raw.githubusercontent.com/mferrerisaza/rails-templates/master/simple_form_tailwind_config/simple_form_tailwind.rb > config/initializers/simple_form_tailwind.rb'
   run 'curl -L https://raw.githubusercontent.com/mferrerisaza/rails-templates/master/simple_form_tailwind_config/overwrite_class_with_error_or_valid_class.rb > config/initializers/overwrite_class_with_error_or_valid_class.rb'
+  run 'curl -L https://raw.githubusercontent.com/mferrerisaza/rails-templates/master/simple_form_tailwind_config/application.tailwind.css > app/assets/stylesheets/application.tailwind.css'
 
   # Generate pages controller
   ########################################
@@ -127,6 +129,63 @@ after_bundle do
       before_action :authenticate_user!
     end
   RUBY
+
+  # Fix devise with turbo
+  ########################################
+  file 'app/controllers/turbo_controller.rb', <<~RUBY
+    class TurboController < ApplicationController
+      class Responder < ActionController::Responder
+        def to_turbo_stream
+          controller.render(options.merge(formats: :html))
+        rescue ActionView::MissingTemplate => error
+          if get?
+            raise error
+          elsif has_errors? && default_action
+            render rendering_options.merge(formats: :html, status: :unprocessable_entity)
+          else
+            redirect_to navigation_location
+          end
+        end
+      end
+
+      self.responder = Responder
+      respond_to :html, :turbo_stream
+    end
+  RUBY
+
+  inject_into_file 'config/initializers/devise.rb', before: 'Devise.setup do |config|' do
+    <<-RUBY
+      # frozen_string_literal: true
+      # Turbo doesn't work with devise by default.
+      # Keep tabs on https://github.com/heartcombo/devise/issues/5446 for a possible fix
+      # Fix from https://gorails.com/episodes/devise-hotwire-turbo
+      class TurboFailureApp < Devise::FailureApp
+        def respond
+          if request_format == :turbo_stream
+            redirect
+          else
+            super
+          end
+        end
+
+        def skip_format?
+          %w(html turbo_stream */*).include? request_format.to_s
+        end
+      end
+    RUBY
+  end
+
+  gsub_file('config/initializers/devise.rb', /# config.parent_controller = 'DeviseController'/, "config.parent_controller = 'TurboController'")
+  gsub_file('config/initializers/devise.rb', /# config.navigational_formats = ['*/*', :html]/, "config.navigational_formats = ['*/*', :html, :turbo_stream]")
+  inject_into_file 'config/initializers/devise.rb', after: '# config.warden do |manager|' do
+    <<-RUBY
+      config.warden do |manager|
+        manager.failure_app = TurboFailureApp
+        # manager.intercept_401 = false
+        # manager.default_strategies(scope: :user).unshift :some_external_strategy
+      end
+    RUBY
+  end
 
   # migrate + devise views
   ########################################
