@@ -65,31 +65,6 @@ file 'app/views/shared/_flashes.html.erb', <<~HTML
   <% end %>
 HTML
 
-# Make flashes dismissable and autocleanable
-file 'app/javascript/controllers/alert_controller.js', <<~JS
-  import { Controller } from "@hotwired/stimulus"
-
-  export default class extends Controller {
-    static values = { waitTime: { type: Number, default: 1000 } }
-
-    connect() {
-      this.timeouts = [window.setTimeout(() => this.dismiss(), this.waitTimeValue)]
-    }
-
-    disconnect() {
-      this.timeouts.forEach((timeout) => window.clearTimeout(timeout))
-    }
-
-    dismiss() {
-      this.element.classList.add("-translate-x-full")
-      this.timeouts.push(window.setTimeout(() => this.element.remove(), 140))
-    }
-  }
-JS
-
-
-rails_command 'stimulus:manifest:update'
-
 # Generators
 ########################################
 generators = <<~RUBY
@@ -119,7 +94,7 @@ after_bundle do
   run 'rm -rf tailwind.config.js'
   run 'curl -L https://raw.githubusercontent.com/mferrerisaza/rails-templates/master/simple_form_tailwind_config/tailwind.config.js > tailwind.config.js'
   run 'curl -L https://raw.githubusercontent.com/mferrerisaza/rails-templates/master/simple_form_tailwind_config/simple_form_tailwind.rb > config/initializers/simple_form_tailwind.rb'
-  run 'curl -L https://raw.githubusercontent.com/mferrerisaza/rails-templates/master/simple_form_tailwind_config/overwrite_class_with_error_or_valid_class.rb.rb > config/initializers/overwrite_class_with_error_or_valid_class.rb'
+  run 'curl -L https://raw.githubusercontent.com/mferrerisaza/rails-templates/master/simple_form_tailwind_config/overwrite_class_with_error_or_valid_class.rb > config/initializers/overwrite_class_with_error_or_valid_class.rb'
 
   # Generate pages controller
   ########################################
@@ -188,6 +163,31 @@ after_bundle do
 
   # Fix puma config
   gsub_file('config/puma.rb', 'pidfile ENV.fetch("PIDFILE") { "tmp/pids/server.pid" }', '# pidfile ENV.fetch("PIDFILE") { "tmp/pids/server.pid" }')
+
+  # Make flashes dismissable and autocleanable
+  file 'app/javascript/controllers/alert_controller.js', <<~JS
+    import { Controller } from "@hotwired/stimulus"
+
+    export default class extends Controller {
+      static values = { waitTime: { type: Number, default: 1000 } }
+
+      connect() {
+        this.timeouts = [window.setTimeout(() => this.dismiss(), this.waitTimeValue)]
+      }
+
+      disconnect() {
+        this.timeouts.forEach((timeout) => window.clearTimeout(timeout))
+      }
+
+      dismiss() {
+        this.element.classList.add("-translate-x-full")
+        this.timeouts.push(window.setTimeout(() => this.element.remove(), 140))
+      }
+    }
+  JS
+
+  rails_command 'stimulus:manifest:update'
+  rails_command 'livereload:install'
 
   git add: '.'
   git commit: "-m 'Initial commit with template from https://github.com/mferrerisaza/rails-templates'"
