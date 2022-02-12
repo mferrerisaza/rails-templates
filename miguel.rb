@@ -177,13 +177,17 @@ after_bundle do
 
   gsub_file('config/initializers/devise.rb', /# config.parent_controller = 'DeviseController'/, "config.parent_controller = 'TurboController'")
   gsub_file('config/initializers/devise.rb', /\# config.navigational_formats = \[\'\*\/\*\'\, \:html\]/, "config.navigational_formats = ['*/*', :html, :turbo_stream]")
-  inject_into_file 'config/initializers/devise.rb', before: '# config.warden do |manager|' do
-    <<~RUBY
-      config.warden do |manager|
-        manager.failure_app = TurboFailureApp
-        # manager.intercept_401 = false
-        # manager.default_strategies(scope: :user).unshift :some_external_strategy
-      end
+  gsub_file('config/initializers/devise.rb', /# config.parent_controller = 'DeviseController'/, "config.parent_controller = 'TurboController'")
+
+
+  inject_into_file 'config/initializers/devise.rb', after: '# config.warden do |manager|' do
+    <<-RUBY
+    # Inject here
+    config.warden do |manager|
+      manager.failure_app = TurboFailureApp
+      # manager.intercept_401 = false
+      # manager.default_strategies(scope: :user).unshift :some_external_strategy
+    end
     RUBY
   end
 
