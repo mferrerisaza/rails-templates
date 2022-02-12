@@ -154,7 +154,7 @@ after_bundle do
   RUBY
 
   inject_into_file 'config/initializers/devise.rb', before: 'Devise.setup do |config|' do
-    <<-RUBY
+    <<~RUBY
       # frozen_string_literal: true
       # Turbo doesn't work with devise by default.
       # Keep tabs on https://github.com/heartcombo/devise/issues/5446 for a possible fix
