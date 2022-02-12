@@ -111,12 +111,18 @@ after_bundle do
   # Generators: db + simple form + pages controller
   ########################################
   rails_command 'db:drop db:create db:migrate'
+
   # Simple form with tailwind installation
   ########################################
   generate('simple_form:install')
   run 'yarn add @tailwindcss/forms'
   run 'rm -rf tailwind.config.js'
-  run 'curl -L https://github.com/mferrerisaza/rails-templates/archive/master.zip > stylesheets.zip'
+  run 'curl -L https://raw.githubusercontent.com/mferrerisaza/rails-templates/master/simple_form_tailwind_config/tailwind.config.js > tailwind.config.js'
+  run 'curl -L https://raw.githubusercontent.com/mferrerisaza/rails-templates/master/simple_form_tailwind_config/simple_form_tailwind.rb > config/initializers/simple_form_tailwind.rb'
+  run 'curl -L https://raw.githubusercontent.com/mferrerisaza/rails-templates/master/simple_form_tailwind_config/overwrite_class_with_error_or_valid_class.rb.rb > config/initializers/overwrite_class_with_error_or_valid_class.rb'
+
+  # Generate pages controller
+  ########################################
   generate(:controller, 'pages', 'home', '--skip-routes', '--no-test-framework')
 
   # Routes
@@ -151,6 +157,9 @@ after_bundle do
   ########################################
   rails_command 'db:migrate'
   generate('devise:views')
+  run 'rm -rf app/views/devise'
+  run 'curl -L https://github.com/mferrerisaza/rails-templates/raw/master/devise.zip > devise.zip'
+  run 'unzip devise.zip -d app/views && rm devise.zip'
 
   # Pages Controller
   ########################################
