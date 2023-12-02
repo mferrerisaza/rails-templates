@@ -29,7 +29,7 @@ gsub_file('config/environments/development.rb', /config\.assets\.debug.*/, 'conf
 # Add flashes
 file 'app/views/shared/_flashes.html.erb', <<~HTML
   <% if notice %>
-    <div class="w-fit transition duration-150 bg-green-100 rounded-lg p-4 text-sm text-green-800 absolute bottom-4 left-4 mr-8 flex justify-between"
+    <div class="z-[100] w-fit transition duration-150 bg-green-100 rounded-lg p-4 text-sm text-green-800 fixed bottom-4 left-4 mr-8 flex justify-between"
          data-controller="alert"
          data-alert-wait-time-value="2000">
       <p class="font-medium flex">
@@ -47,7 +47,7 @@ file 'app/views/shared/_flashes.html.erb', <<~HTML
   <% end %>
 
   <% if alert %>
-    <div class="w-fit transition duration-150 bg-red-100 rounded-lg p-4 text-sm text-red-800 absolute bottom-4 left-4 mr-8 flex justify-between"
+    <div class="z-[100] w-fit transition duration-150 bg-red-100 rounded-lg p-4 text-sm text-red-800 fixed bottom-4 left-4 mr-8 flex justify-between"
          data-controller="alert"
          data-alert-wait-time-value="2000">
       <p class="font-medium flex">
@@ -136,66 +136,69 @@ after_bundle do
     end
   RUBY
 
-  # Fix devise with turbo
-  ########################################
-  file 'app/controllers/turbo_controller.rb', <<~RUBY
-    class TurboController < ApplicationController
-      class Responder < ActionController::Responder
-        def to_turbo_stream
-          controller.render(options.merge(formats: :html))
-        rescue ActionView::MissingTemplate => error
-          if get?
-            raise error
-          elsif has_errors? && default_action
-            render rendering_options.merge(formats: :html, status: :unprocessable_entity)
-          else
-            redirect_to navigation_location
-          end
-        end
-      end
+  # # Fix devise with turbo
+  # ########################################
+  # file 'app/controllers/turbo_controller.rb', <<~RUBY
+  #   class TurboController < ApplicationController
+  #     class Responder < ActionController::Responder
+  #       def to_turbo_stream
+  #         controller.render(options.merge(formats: :html))
+  #       rescue ActionView::MissingTemplate => error
+  #         if get?
+  #           raise error
+  #         elsif has_errors? && default_action
+  #           render rendering_options.merge(formats: :html, status: :unprocessable_entity)
+  #         else
+  #           redirect_to navigation_location
+  #         end
+  #       end
+  #     end
 
-      self.responder = Responder
-      respond_to :html, :turbo_stream
-    end
-  RUBY
+  #     self.responder = Responder
+  #     respond_to :html, :turbo_stream
+  #   end
+  # RUBY
 
-  inject_into_file 'config/initializers/devise.rb', before: 'Devise.setup do |config|' do
-    <<~RUBY
-      # frozen_string_literal: true
-      # Turbo doesn't work with devise by default.
-      # Keep tabs on https://github.com/heartcombo/devise/issues/5446 for a possible fix
-      # Fix from https://gorails.com/episodes/devise-hotwire-turbo
-      class TurboFailureApp < Devise::FailureApp
-        def respond
-          if request_format == :turbo_stream
-            redirect
-          else
-            super
-          end
-        end
+  # inject_into_file 'config/initializers/devise.rb', before: 'Devise.setup do |config|' do
+  #   <<~RUBY
+  #     # frozen_string_literal: true
+  #     # Turbo doesn't work with devise by default.
+  #     # Keep tabs on https://github.com/heartcombo/devise/issues/5446 for a possible fix
+  #     # Fix from https://gorails.com/episodes/devise-hotwire-turbo
+  #     class TurboFailureApp < Devise::FailureApp
+  #       def respond
+  #         if request_format == :turbo_stream
+  #           redirect
+  #         else
+  #           super
+  #         end
+  #       end
 
-        def skip_format?
-          %w(html turbo_stream */*).include? request_format.to_s
-        end
-      end
-    RUBY
-  end
+  #       def skip_format?
+  #         %w(html turbo_stream */*).include? request_format.to_s
+  #       end
+  #     end
+  #   RUBY
+  # end
 
-  gsub_file('config/initializers/devise.rb', /# config.parent_controller = 'DeviseController'/, "config.parent_controller = 'TurboController'")
-  gsub_file('config/initializers/devise.rb', /\# config.navigational_formats = \[\'\*\/\*\'\, \:html\]/, "config.navigational_formats = ['*/*', :html, :turbo_stream]")
-  gsub_file('config/initializers/devise.rb', /# config.parent_controller = 'DeviseController'/, "config.parent_controller = 'TurboController'")
+  # gsub_file('config/initializers/devise.rb', /# config.parent_controller = 'DeviseController'/, "config.parent_controller = 'TurboController'")
+  # gsub_file('config/initializers/devise.rb', /\# config.navigational_formats = \[\'\*\/\*\'\, \:html\]/, "config.navigational_formats = ['*/*', :html, :turbo_stream]")
+  # gsub_file('config/initializers/devise.rb', /# config.parent_controller = 'DeviseController'/, "config.parent_controller = 'TurboController'")
+
+  # gsub_file('config/initializers/devise.rb', /# config.responder.error_status = :ok/, " config.responder.error_status = :unprocessable_entity")
+  # gsub_file('config/initializers/devise.rb', /# config.responder.redirect_status = :found/, " config.responder.redirect_status = :see_other")
 
 
-  inject_into_file 'config/initializers/devise.rb', after: '# config.warden do |manager|' do
-    <<-RUBY
-    # Inject here
-    config.warden do |manager|
-      manager.failure_app = TurboFailureApp
-      # manager.intercept_401 = false
-      # manager.default_strategies(scope: :user).unshift :some_external_strategy
-    end
-    RUBY
-  end
+  # inject_into_file 'config/initializers/devise.rb', after: '# config.warden do |manager|' do
+  #   <<-RUBY
+  #   # Inject here
+  #   config.warden do |manager|
+  #     manager.failure_app = TurboFailureApp
+  #     # manager.intercept_401 = false
+  #     # manager.default_strategies(scope: :user).unshift :some_external_strategy
+  #   end
+  #   RUBY
+  # end
 
   # migrate + devise views
   ########################################
@@ -238,7 +241,11 @@ after_bundle do
     import { Controller } from "@hotwired/stimulus"
 
     export default class extends Controller {
-      static values = { waitTime: { type: Number, default: 1000 } }
+      static values = {
+        waitTime: { type: Number, default: 1000 },
+        transitionDuration: { type: Number, default: 140 },
+        transition: { type: String, default: '-translate-x-full'}
+      }
 
       connect() {
         this.timeouts = [window.setTimeout(() => this.dismiss(), this.waitTimeValue)]
@@ -249,8 +256,8 @@ after_bundle do
       }
 
       dismiss() {
-        this.element.classList.add("-translate-x-full")
-        this.timeouts.push(window.setTimeout(() => this.element.remove(), 140))
+        this.element.classList.add(this.transitionValue)
+        this.timeouts.push(window.setTimeout(() => this.element.remove(), this.transitionDurationValue))
       }
     }
   JS
