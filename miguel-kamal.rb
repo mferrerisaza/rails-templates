@@ -25,9 +25,16 @@ inject_into_file 'Gemfile', before: 'group :development, :test do' do
   <<~RUBY
     gem 'devise'
     gem 'simple_form'
-    gem 'kamal', require: false
-    gem 'thruster', require: false
   RUBY
+end
+
+# Rails 8 already includes kamal and thruster, but let's ensure thruster is there
+unless File.read('Gemfile').include?('thruster')
+  inject_into_file 'Gemfile', before: 'group :development, :test do' do
+    <<~RUBY
+      gem 'thruster', require: false
+    RUBY
+  end
 end
 
 inject_into_file 'Gemfile', after: 'group :development, :test do' do
@@ -218,9 +225,8 @@ after_bundle do
 
   # Kamal configuration
   ########################################
-  run 'kamal init'
-
-  # Add SQLite volumes to Kamal deploy.yml
+  # Rails 8 already runs kamal init and creates config/deploy.yml
+  # Just add SQLite volumes to the existing deploy.yml
   gsub_file 'config/deploy.yml', /# volumes:.*?\n.*?# - "\/data\/app-storage:\/rails\/storage"/m, <<-YAML.strip
 volumes:
   - "/data/#{File.basename(Dir.pwd)}/storage:/rails/storage"
