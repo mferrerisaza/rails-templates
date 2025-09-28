@@ -1,3 +1,23 @@
+=begin
+Rails template with PostgreSQL, Devise, SimpleForm, and Tailwind CSS v4
+
+Usage:
+  rails new myapp \
+    --database=postgresql \
+    --css=tailwind \
+    --javascript=esbuild \
+    -a propshaft \
+    -m https://raw.githubusercontent.com/mferrerisaza/rails-templates/master/miguel.rb
+
+This template includes:
+- Devise authentication
+- SimpleForm with Tailwind CSS v4
+- PostgreSQL database
+- Tailwind CSS with forms plugin
+- UUID primary keys
+- Flash messages with Stimulus
+=end
+
 run "if uname | grep -q 'Darwin'; then pgrep spring | xargs kill -9; fi"
 
 # GEMFILE
@@ -94,7 +114,6 @@ after_bundle do
   run 'yarn add -D @tailwindcss/forms'
   run 'rm -rf tailwind.config.js'
   run 'rm -rf app/assets/stylesheets/application.tailwind.css'
-  run 'curl -L https://raw.githubusercontent.com/mferrerisaza/rails-templates/master/simple_form_tailwind_config/tailwind.config.js > tailwind.config.js'
   run 'curl -L https://raw.githubusercontent.com/mferrerisaza/rails-templates/master/simple_form_tailwind_config/simple_form_tailwind.rb > config/initializers/simple_form_tailwind.rb'
   run 'curl -L https://raw.githubusercontent.com/mferrerisaza/rails-templates/master/simple_form_tailwind_config/overwrite_class_with_error_or_valid_class.rb > config/initializers/overwrite_class_with_error_or_valid_class.rb'
   run 'curl -L https://raw.githubusercontent.com/mferrerisaza/rails-templates/master/simple_form_tailwind_config/application.tailwind.css > app/assets/stylesheets/application.tailwind.css'
