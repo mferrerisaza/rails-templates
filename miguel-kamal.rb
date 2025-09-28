@@ -262,13 +262,23 @@ volumes:
     RUBY
   end
 
-  # Create .kamal/secrets file template
-  file '.kamal/secrets', <<~SECRETS
-    # Kamal secrets - DO NOT COMMIT THIS FILE
-    KAMAL_REGISTRY_USERNAME=your-docker-username
-    KAMAL_REGISTRY_PASSWORD=your-docker-password
-    RAILS_MASTER_KEY=#{File.read('config/master.key').strip}
-  SECRETS
+  # Update existing .kamal/secrets with our template
+  if File.exist?('.kamal/secrets')
+    append_file '.kamal/secrets', <<~SECRETS
+
+# Additional secrets for this template
+KAMAL_REGISTRY_USERNAME=your-docker-username
+KAMAL_REGISTRY_PASSWORD=your-docker-password
+RAILS_MASTER_KEY=#{File.read('config/master.key').strip}
+    SECRETS
+  else
+    file '.kamal/secrets', <<~SECRETS
+# Kamal secrets - DO NOT COMMIT THIS FILE
+KAMAL_REGISTRY_USERNAME=your-docker-username
+KAMAL_REGISTRY_PASSWORD=your-docker-password
+RAILS_MASTER_KEY=#{File.read('config/master.key').strip}
+    SECRETS
+  end
 
   append_file '.gitignore', <<~TXT
     # Ignore Kamal secrets
