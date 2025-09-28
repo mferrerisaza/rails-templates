@@ -1,3 +1,22 @@
+# Kamal-ready Rails template with SQLite
+#
+# Usage:
+#   rails new myapp \
+#     --database=sqlite3 \
+#     --css=tailwind \
+#     --javascript=esbuild \
+#     -a propshaft \
+#     -m https://raw.githubusercontent.com/mferrerisaza/rails-templates/master/miguel-kamal.rb
+#
+# This template includes:
+# - Devise authentication
+# - SimpleForm with Tailwind CSS
+# - Kamal deployment configuration
+# - Thruster HTTP/2 proxy
+# - SQLite for production (persistent volumes in Kamal)
+# - Tailwind CSS with forms plugin
+# - UUID primary keys removed (using default integer IDs for SQLite)
+
 run "if uname | grep -q 'Darwin'; then pgrep spring | xargs kill -9; fi"
 
 # GEMFILE
@@ -6,6 +25,8 @@ inject_into_file 'Gemfile', before: 'group :development, :test do' do
   <<~RUBY
     gem 'devise'
     gem 'simple_form'
+    gem 'kamal', require: false
+    gem 'thruster', require: false
   RUBY
 end
 
@@ -73,7 +94,7 @@ generators = <<~RUBY
     generate.assets false
     generate.helper false
     generate.test_framework :test_unit, fixture: false
-    generate.orm :active_record, primary_key_type: :uuid
+    generate.orm :active_record
   end
 RUBY
 
@@ -195,6 +216,57 @@ after_bundle do
 
   rails_command 'stimulus:manifest:update'
 
+  # Kamal configuration
+  ########################################
+  run 'kamal init'
+
+  # Add SQLite volumes to Kamal deploy.yml
+  gsub_file 'config/deploy.yml', /# volumes:.*?\n.*?# - "\/data\/app-storage:\/rails\/storage"/m, <<-YAML.strip
+volumes:
+  - "/data/#{File.basename(Dir.pwd)}/storage:/rails/storage"
+  - "/data/#{File.basename(Dir.pwd)}/db:/rails/db"
+  YAML
+
+  # Rails 8 already generates an optimized Dockerfile
+  # Just update it to use Thruster as the server
+  if File.exist?('Dockerfile')
+    gsub_file 'Dockerfile', 'CMD ["./bin/rails", "server"]', 'CMD ["bundle", "exec", "thrust", "./bin/rails", "server"]'
+  end
+
+  # Rails 8 includes health check by default at /up, no need to add it
+
+  # Configure SQLite for production
+  gsub_file 'config/database.yml', /production:\s*<<: \*default\s*database:.*/, <<~YAML.strip
+    production:
+      <<: *default
+      database: db/production.sqlite3
+      pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+      timeout: 5000
+  YAML
+
+  # Update production environment for Kamal and Thruster
+  inject_into_file 'config/environments/production.rb', after: 'config.assume_ssl = true' do
+    <<~RUBY
+
+      # Trust Thruster proxy
+      config.force_ssl = false
+      config.assume_ssl = true
+    RUBY
+  end
+
+  # Create .kamal/secrets file template
+  file '.kamal/secrets', <<~SECRETS
+    # Kamal secrets - DO NOT COMMIT THIS FILE
+    KAMAL_REGISTRY_USERNAME=your-docker-username
+    KAMAL_REGISTRY_PASSWORD=your-docker-password
+    RAILS_MASTER_KEY=#{File.read('config/master.key').strip}
+  SECRETS
+
+  append_file '.gitignore', <<~TXT
+    # Ignore Kamal secrets
+    .kamal/secrets
+  TXT
+
   git add: '.'
-  git commit: "-m 'Initial commit with template from https://github.com/mferrerisaza/rails-templates'"
+  git commit: "-m 'Initial commit with Kamal-ready template from https://github.com/mferrerisaza/rails-templates'"
 end
